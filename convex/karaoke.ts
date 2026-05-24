@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
 const avatarValidator = v.object({
   body: v.number(),
@@ -22,8 +22,10 @@ const pushSubscriptionValidator = v.object({
 });
 
 type QueueEntry = Doc<"queueEntries">;
+type WipeResult = { deleted: number; continuing: boolean };
 
 const liveStatuses = new Set(["waiting", "ready", "singing"]);
+const wipeBatchSize = 80;
 
 function cleanText(value: string, fallback: string) {
   const trimmed = value.trim().replace(/\s+/g, " ");
@@ -171,6 +173,48 @@ async function clearReactions(
   for (const reaction of reactions) {
     await ctx.db.delete(reaction._id);
   }
+}
+
+async function deleteWipeBatch(ctx: MutationCtx) {
+  let deleted = 0;
+  let continuing = false;
+
+  const reactions = await ctx.db.query("reactions").take(wipeBatchSize);
+  continuing ||= reactions.length === wipeBatchSize;
+  for (const row of reactions) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+
+  const history = await ctx.db.query("performanceHistory").take(wipeBatchSize);
+  continuing ||= history.length === wipeBatchSize;
+  for (const row of history) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+
+  const queueEntries = await ctx.db.query("queueEntries").take(wipeBatchSize);
+  continuing ||= queueEntries.length === wipeBatchSize;
+  for (const row of queueEntries) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+
+  const singers = await ctx.db.query("singers").take(wipeBatchSize);
+  continuing ||= singers.length === wipeBatchSize;
+  for (const row of singers) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+
+  const sessions = await ctx.db.query("sessions").take(wipeBatchSize);
+  continuing ||= sessions.length === wipeBatchSize;
+  for (const row of sessions) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+
+  return { deleted, continuing: continuing || deleted > 0 };
 }
 
 async function finishEntry(ctx: MutationCtx, entry: QueueEntry, finalStatus: "done" | "skipped") {
@@ -715,5 +759,27 @@ export const sendReaction = mutation({
       emoji,
       createdAt: Date.now(),
     });
+  },
+});
+
+export const continueWipeAllForTesting = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<WipeResult> => {
+    const result = await deleteWipeBatch(ctx);
+    if (result.continuing) {
+      await ctx.scheduler.runAfter(0, internal.karaoke.continueWipeAllForTesting, {});
+    }
+    return result;
+  },
+});
+
+export const wipeAllForTesting = mutation({
+  args: { confirm: v.literal("WIPE_KARAOKE_DB") },
+  handler: async (ctx): Promise<WipeResult> => {
+    const result = await deleteWipeBatch(ctx);
+    if (result.continuing) {
+      await ctx.scheduler.runAfter(0, internal.karaoke.continueWipeAllForTesting, {});
+    }
+    return result;
   },
 });

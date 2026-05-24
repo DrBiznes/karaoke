@@ -29,13 +29,36 @@ const defaultAvatar: AvatarConfig = {
 
 const emojiSet = ['🔥', '👏', '😂', '❤️', '🎤', '⭐']
 const avatarLabels = {
-  body: ['Block', 'Tall', 'Wide', 'Jacket'],
-  face: ['Joy', 'Cool', 'Star', 'Focus'],
-  hair: ['Sweep', 'Peak', 'Cap', 'Crown'],
-  accessory: ['None', 'Glasses', 'Mic', 'Band'],
-  background: ['Pink', 'Amber', 'Lime', 'Cyan'],
+  body: ['Tee', 'Band Tee', 'Denim', 'Turtleneck', 'Hoodie', 'Vest'],
+  face: ['Joy', 'Cool', 'Star', 'Focus', 'Belt', 'Smirk'],
+  hair: ['Shag', 'Mullet', 'Bob', 'Beanie', 'Buzz', 'Curls'],
+  accessory: ['None', 'Shades', 'Mic', 'Cans', 'Scarf', 'Halo'],
+  background: ['Pink', 'Amber', 'Yellow', 'Lime', 'Cyan', 'Magenta'],
 }
 const stripeColors = ['#f03070', '#f0a000', '#f0f000', '#30d060', '#30c0f0', '#c030f0']
+
+const SKIN = '#f0d6b8'
+const SKIN_SHADOW = '#c8966e'
+const INK = '#1e1e5a'
+const PAPER = '#f5f5f8'
+
+type AvatarPalette = { bg: string; accent: string; body: string; hair: string; pop: string }
+
+function avatarSlot(value: number, max: number) {
+  return ((value % max) + max) % max
+}
+
+function paletteFor(bgIdx: number): AvatarPalette {
+  const len = stripeColors.length
+  const i = avatarSlot(bgIdx, len)
+  return {
+    bg: stripeColors[i],
+    accent: stripeColors[(i + 3) % len],
+    body: stripeColors[(i + 2) % len],
+    hair: stripeColors[(i + 4) % len],
+    pop: stripeColors[(i + 1) % len],
+  }
+}
 
 function notificationPermission() {
   return typeof Notification === 'undefined' ? 'default' : Notification.permission
@@ -140,31 +163,384 @@ function StripeBand({ footer = false }: { footer?: boolean }) {
   )
 }
 
+function renderBackground(idx: number, bg: string, accent: string) {
+  const i = avatarSlot(idx, 6)
+  return (
+    <g>
+      <rect width="128" height="128" fill={bg} />
+      {i === 1 && (
+        <g fill={accent} fillOpacity="0.45">
+          {[16, 40, 64, 88, 112].flatMap((y) =>
+            [16, 40, 64, 88, 112].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="3" />),
+          )}
+        </g>
+      )}
+      {i === 2 && (
+        <g fill={accent} fillOpacity="0.28">
+          {[-44, -12, 20, 52, 84, 116].map((x) => (
+            <polygon key={x} points={`${x},0 ${x + 12},0 ${x + 60},128 ${x + 48},128`} />
+          ))}
+        </g>
+      )}
+      {i === 3 && (
+        <g fill="none" stroke={accent} strokeOpacity="0.4">
+          {[58, 44, 30, 18].map((r) => <circle key={r} cx="64" cy="64" r={r} strokeWidth="2" />)}
+        </g>
+      )}
+      {i === 4 && (
+        <g fill={accent} fillOpacity="0.7">
+          {[[22, 26], [102, 30], [24, 96], [104, 100], [60, 14], [68, 116]].map(([x, y]) => (
+            <g key={`${x}-${y}`}>
+              <rect x={x - 1} y={y - 5} width="2" height="10" />
+              <rect x={x - 5} y={y - 1} width="10" height="2" />
+            </g>
+          ))}
+        </g>
+      )}
+      {i === 5 && <rect x="0" y="64" width="128" height="64" fill={accent} fillOpacity="0.35" />}
+    </g>
+  )
+}
+
+function renderHalo(pop: string) {
+  return (
+    <g>
+      <circle cx="64" cy="48" r="46" fill="#1a1a1a" />
+      {[42, 38, 34, 28, 22].map((r) => (
+        <circle key={r} cx="64" cy="48" r={r} fill="none" stroke="#444" strokeWidth="0.6" />
+      ))}
+      <circle cx="64" cy="48" r="14" fill={pop} />
+      <circle cx="64" cy="48" r="3" fill="#1a1a1a" />
+      <path d="M 30 32 Q 52 12 82 14" stroke="#fff" strokeWidth="2" fill="none" strokeOpacity="0.18" />
+    </g>
+  )
+}
+
+function renderBody(idx: number, color: string) {
+  const i = avatarSlot(idx, 6)
+  if (i === 0) {
+    return (
+      <g>
+        <rect x="20" y="92" width="88" height="36" rx="6" fill={color} />
+        <rect x="20" y="92" width="88" height="5" fill="#fff" fillOpacity="0.22" />
+        <rect x="20" y="120" width="88" height="8" fill="#000" fillOpacity="0.2" />
+        <path d="M 50 92 Q 64 102 78 92 Z" fill={SKIN} />
+      </g>
+    )
+  }
+  if (i === 1) {
+    return (
+      <g>
+        <rect x="20" y="92" width="88" height="36" rx="6" fill={INK} />
+        <rect x="20" y="92" width="88" height="5" fill="#fff" fillOpacity="0.12" />
+        <rect x="20" y="120" width="88" height="8" fill="#000" fillOpacity="0.25" />
+        <path d="M 50 92 Q 64 102 78 92 Z" fill={SKIN} />
+        <polygon points="62,100 71,100 65,112 73,112 58,124 63,114 55,114" fill={color} />
+      </g>
+    )
+  }
+  if (i === 2) {
+    return (
+      <g>
+        <rect x="18" y="92" width="92" height="36" rx="4" fill={color} />
+        <rect x="18" y="92" width="92" height="5" fill="#fff" fillOpacity="0.22" />
+        <rect x="18" y="120" width="92" height="8" fill="#000" fillOpacity="0.22" />
+        <polygon points="40,92 60,92 64,108 56,98" fill={color} />
+        <polygon points="88,92 68,92 64,108 72,98" fill={color} />
+        <polygon points="56,98 72,98 64,116" fill={SKIN} />
+        <line x1="64" y1="108" x2="64" y2="128" stroke="#000" strokeOpacity="0.25" strokeWidth="1" />
+        <circle cx="60" cy="116" r="1.6" fill={INK} />
+        <circle cx="68" cy="116" r="1.6" fill={INK} />
+        <rect x="26" y="116" width="16" height="6" rx="1" fill="#000" fillOpacity="0.18" />
+        <rect x="86" y="116" width="16" height="6" rx="1" fill="#000" fillOpacity="0.18" />
+      </g>
+    )
+  }
+  if (i === 3) {
+    return (
+      <g>
+        <rect x="50" y="80" width="28" height="14" rx="5" fill={color} />
+        <rect x="20" y="92" width="88" height="36" rx="6" fill={color} />
+        <rect x="20" y="92" width="88" height="5" fill="#fff" fillOpacity="0.2" />
+        <rect x="20" y="120" width="88" height="8" fill="#000" fillOpacity="0.2" />
+        <rect x="50" y="88" width="28" height="3" fill="#000" fillOpacity="0.18" />
+      </g>
+    )
+  }
+  if (i === 4) {
+    return (
+      <g>
+        <rect x="16" y="88" width="96" height="40" rx="10" fill={color} />
+        <rect x="16" y="88" width="96" height="5" fill="#fff" fillOpacity="0.2" />
+        <rect x="16" y="120" width="96" height="8" fill="#000" fillOpacity="0.25" />
+        <rect x="48" y="88" width="32" height="8" rx="4" fill={SKIN} />
+        <rect x="54" y="92" width="2" height="14" fill="#fff" fillOpacity="0.9" />
+        <rect x="72" y="92" width="2" height="14" fill="#fff" fillOpacity="0.9" />
+        <circle cx="55" cy="108" r="2" fill="#fff" />
+        <circle cx="73" cy="108" r="2" fill="#fff" />
+        <path d="M 36 110 Q 64 118 92 110 L 92 120 Q 64 124 36 120 Z" fill="#000" fillOpacity="0.18" />
+      </g>
+    )
+  }
+  return (
+    <g>
+      <rect x="20" y="92" width="88" height="36" rx="6" fill={PAPER} />
+      <rect x="20" y="120" width="88" height="8" fill="#000" fillOpacity="0.1" />
+      <polygon points="20,92 56,92 60,108 60,128 20,128" fill={color} />
+      <polygon points="108,92 72,92 68,108 68,128 108,128" fill={color} />
+      <rect x="20" y="92" width="40" height="4" fill="#fff" fillOpacity="0.22" />
+      <rect x="68" y="92" width="40" height="4" fill="#fff" fillOpacity="0.22" />
+      <rect x="20" y="122" width="40" height="6" fill="#000" fillOpacity="0.2" />
+      <rect x="68" y="122" width="40" height="6" fill="#000" fillOpacity="0.2" />
+      <path d="M 56 92 Q 64 100 72 92 Z" fill={SKIN} />
+      <circle cx="56" cy="108" r="1.4" fill={INK} />
+      <circle cx="72" cy="108" r="1.4" fill={INK} />
+    </g>
+  )
+}
+
+function renderHair(idx: number, color: string) {
+  const i = avatarSlot(idx, 6)
+  if (i === 0) {
+    return (
+      <g>
+        <path d="M 30 38 L 36 22 L 52 20 L 50 60 L 38 62 Z" fill={color} />
+        <path d="M 98 38 L 92 22 L 76 20 L 78 60 L 90 62 Z" fill={color} />
+        <path d="M 34 24 Q 64 10 94 24 L 92 46 Q 64 38 36 46 Z" fill={color} />
+        <rect x="36" y="22" width="56" height="4" fill="#fff" fillOpacity="0.22" />
+        <path d="M 40 38 Q 64 32 88 38 L 86 44 Q 64 40 42 44 Z" fill="#000" fillOpacity="0.18" />
+      </g>
+    )
+  }
+  if (i === 1) {
+    return (
+      <g>
+        <path d="M 30 50 Q 24 74 32 90 L 96 90 Q 104 74 98 50 Z" fill={color} fillOpacity="0.95" />
+        <path d="M 32 28 Q 64 14 96 28 L 94 40 Q 64 32 34 40 Z" fill={color} />
+        <rect x="32" y="28" width="64" height="3" fill="#fff" fillOpacity="0.22" />
+        <rect x="32" y="86" width="64" height="4" fill="#000" fillOpacity="0.2" />
+      </g>
+    )
+  }
+  if (i === 2) {
+    return (
+      <g>
+        <path d="M 28 32 Q 64 12 100 32 L 100 58 L 94 64 L 92 40 Q 64 34 36 40 L 34 64 L 28 58 Z" fill={color} />
+        <rect x="34" y="22" width="60" height="4" fill="#fff" fillOpacity="0.25" />
+        <path d="M 40 38 Q 64 34 88 38 L 86 44 Q 64 40 42 44 Z" fill="#000" fillOpacity="0.15" />
+      </g>
+    )
+  }
+  if (i === 3) {
+    return (
+      <g>
+        <path d="M 26 26 Q 26 10 64 8 Q 102 10 102 26 L 102 40 L 26 40 Z" fill={color} />
+        <rect x="24" y="38" width="80" height="12" rx="2" fill={color} />
+        <rect x="24" y="38" width="80" height="2" fill="#000" fillOpacity="0.28" />
+        {[36, 50, 64, 78, 92].map((x) => (
+          <rect key={x} x={x} y="40" width="2" height="8" fill="#000" fillOpacity="0.2" />
+        ))}
+        <circle cx="64" cy="8" r="6" fill={color} />
+        <circle cx="62" cy="6" r="2" fill="#fff" fillOpacity="0.45" />
+      </g>
+    )
+  }
+  if (i === 4) {
+    return (
+      <g>
+        <path d="M 34 24 Q 64 18 94 24 L 94 36 L 34 36 Z" fill={color} fillOpacity="0.85" />
+        {[[42, 28], [54, 30], [64, 28], [74, 30], [86, 28]].map(([x, y]) => (
+          <rect key={`${x}-${y}`} x={x} y={y} width="2" height="2" fill="#000" fillOpacity="0.32" />
+        ))}
+        <rect x="36" y="22" width="56" height="3" fill="#fff" fillOpacity="0.2" />
+      </g>
+    )
+  }
+  return (
+    <g>
+      <path d="M 32 38 Q 64 24 96 38 L 96 44 L 32 44 Z" fill={color} />
+      {[34, 46, 58, 70, 82].map((x) => (
+        <circle key={x} cx={x + 6} cy="22" r="9" fill={color} />
+      ))}
+      {[34, 46, 58, 70, 82].map((x) => (
+        <circle key={`h-${x}`} cx={x + 4} cy="19" r="2.5" fill="#fff" fillOpacity="0.35" />
+      ))}
+    </g>
+  )
+}
+
+function renderFace(idx: number) {
+  const i = avatarSlot(idx, 6)
+  return (
+    <g>
+      {i === 0 && (
+        <g stroke={INK} strokeWidth="2.5" fill="none" strokeLinecap="round">
+          <path d="M 42 42 Q 48 38 54 42" />
+          <path d="M 74 42 Q 80 38 86 42" />
+        </g>
+      )}
+      {i === 1 && (
+        <g fill={INK}>
+          <rect x="42" y="42" width="14" height="3" rx="1" />
+          <rect x="72" y="42" width="14" height="3" rx="1" />
+        </g>
+      )}
+      {i === 2 && (
+        <g fill={INK}>
+          <rect x="42" y="40" width="12" height="2" />
+          <rect x="74" y="40" width="12" height="2" />
+        </g>
+      )}
+      {i === 3 && (
+        <g fill={INK}>
+          <polygon points="42,46 56,40 56,43 42,49" />
+          <polygon points="86,46 72,40 72,43 86,49" />
+        </g>
+      )}
+      {i === 4 && (
+        <g stroke={INK} strokeWidth="2.5" fill="none" strokeLinecap="round">
+          <path d="M 42 39 Q 48 34 54 39" />
+          <path d="M 74 39 Q 80 34 86 39" />
+        </g>
+      )}
+      {i === 5 && (
+        <g stroke={INK} fill={INK} strokeLinecap="round">
+          <rect x="42" y="42" width="14" height="3" rx="1" />
+          <path d="M 72 41 Q 80 36 86 41" strokeWidth="2.5" fill="none" />
+        </g>
+      )}
+
+      {i !== 1 && i !== 2 && i !== 4 && (
+        <g>
+          <rect x="44" y="48" width="9" height="9" rx="2" fill={INK} />
+          <rect x="75" y="48" width="9" height="9" rx="2" fill={INK} />
+          <rect x="49" y="49" width="2" height="2" fill="#fff" />
+          <rect x="80" y="49" width="2" height="2" fill="#fff" />
+        </g>
+      )}
+      {i === 1 && (
+        <g fill={INK}>
+          <rect x="44" y="52" width="9" height="3" rx="1.5" />
+          <rect x="75" y="52" width="9" height="3" rx="1.5" />
+        </g>
+      )}
+      {i === 2 && (
+        <g fill={INK}>
+          <polygon transform="translate(48,52)" points="0,-7 2,-2 7,0 2,2 0,7 -2,2 -7,0 -2,-2" />
+          <polygon transform="translate(80,52)" points="0,-7 2,-2 7,0 2,2 0,7 -2,2 -7,0 -2,-2" />
+        </g>
+      )}
+      {i === 4 && (
+        <g stroke={INK} strokeWidth="2.5" fill="none" strokeLinecap="round">
+          <path d="M 42 53 Q 48 47 54 53" />
+          <path d="M 74 53 Q 80 47 86 53" />
+        </g>
+      )}
+
+      {i === 0 && (
+        <path d="M 50 64 Q 64 76 78 64" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
+      )}
+      {i === 1 && (
+        <path d="M 52 68 L 78 66" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
+      )}
+      {i === 2 && <ellipse cx="64" cy="68" rx="5" ry="4" fill={INK} />}
+      {i === 3 && (
+        <path d="M 54 70 Q 64 66 74 70" stroke={INK} strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      )}
+      {i === 4 && (
+        <g>
+          <ellipse cx="64" cy="68" rx="11" ry="9" fill={INK} />
+          <ellipse cx="64" cy="72" rx="6" ry="3" fill="#d04060" />
+          <rect x="60" y="61" width="8" height="2" fill="#fff" fillOpacity="0.4" />
+        </g>
+      )}
+      {i === 5 && (
+        <path d="M 50 68 Q 60 64 72 68 L 78 64" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
+      )}
+    </g>
+  )
+}
+
+function renderAccessory(idx: number, pop: string) {
+  const i = avatarSlot(idx, 6)
+  if (i === 1) {
+    return (
+      <g>
+        <rect x="38" y="44" width="22" height="16" rx="7" fill={INK} />
+        <rect x="68" y="44" width="22" height="16" rx="7" fill={INK} />
+        <rect x="58" y="50" width="12" height="3" fill={INK} />
+        <rect x="42" y="46" width="5" height="3" rx="1" fill="#fff" fillOpacity="0.35" />
+        <rect x="72" y="46" width="5" height="3" rx="1" fill="#fff" fillOpacity="0.35" />
+      </g>
+    )
+  }
+  if (i === 2) {
+    return (
+      <g>
+        <rect x="92" y="80" width="6" height="34" rx="2" fill={INK} />
+        <circle cx="95" cy="72" r="11" fill="#a8a8b8" />
+        <circle cx="95" cy="72" r="11" fill={INK} fillOpacity="0.15" />
+        <g stroke={INK} strokeWidth="1" opacity="0.55">
+          <line x1="86" y1="68" x2="104" y2="68" />
+          <line x1="86" y1="72" x2="104" y2="72" />
+          <line x1="86" y1="76" x2="104" y2="76" />
+        </g>
+        <circle cx="91" cy="68" r="2" fill="#fff" fillOpacity="0.6" />
+        <rect x="89" y="80" width="12" height="8" rx="3" fill={SKIN} />
+        <rect x="89" y="80" width="12" height="2" fill={SKIN_SHADOW} fillOpacity="0.5" />
+      </g>
+    )
+  }
+  if (i === 3) {
+    return (
+      <g>
+        <path d="M 30 38 Q 64 12 98 38" stroke={INK} strokeWidth="5" fill="none" strokeLinecap="round" />
+        <path d="M 30 38 Q 64 12 98 38" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeOpacity="0.3" />
+        <rect x="22" y="38" width="14" height="20" rx="5" fill={INK} />
+        <rect x="92" y="38" width="14" height="20" rx="5" fill={INK} />
+        <rect x="24" y="40" width="4" height="16" rx="2" fill="#fff" fillOpacity="0.25" />
+        <rect x="100" y="40" width="4" height="16" rx="2" fill="#fff" fillOpacity="0.25" />
+        <rect x="22" y="46" width="14" height="3" fill={pop} />
+        <rect x="92" y="46" width="14" height="3" fill={pop} />
+      </g>
+    )
+  }
+  if (i === 4) {
+    return (
+      <g>
+        <rect x="22" y="80" width="84" height="14" rx="4" fill={pop} />
+        <rect x="22" y="83" width="84" height="2" fill="#fff" fillOpacity="0.3" />
+        <rect x="22" y="90" width="84" height="2" fill="#000" fillOpacity="0.25" />
+        <rect x="80" y="92" width="14" height="26" fill={pop} />
+        <rect x="80" y="92" width="14" height="3" fill="#000" fillOpacity="0.28" />
+        <rect x="81" y="118" width="2" height="4" fill={pop} />
+        <rect x="86" y="118" width="2" height="4" fill={pop} />
+        <rect x="91" y="118" width="2" height="4" fill={pop} />
+      </g>
+    )
+  }
+  return null
+}
+
 function Avatar({ config = defaultAvatar, size = 'medium' }: { config?: AvatarConfig; size?: 'small' | 'medium' | 'large' }) {
-  const bg = stripeColors[config.background % stripeColors.length]
-  const body = stripeColors[(config.body + 3) % stripeColors.length]
-  const hair = stripeColors[(config.hair + 5) % stripeColors.length]
-  const accessory = stripeColors[(config.accessory + 1) % stripeColors.length]
-  const faceY = config.face % 2 === 0 ? 47 : 43
+  const palette = paletteFor(config.background)
+  const accessoryIdx = avatarSlot(config.accessory, 6)
   return (
     <svg className={`avatar avatar-${size}`} viewBox="0 0 128 128" aria-hidden="true">
-      <rect width="128" height="128" fill={bg} />
-      <rect x="18" y="20" width="92" height="92" fill="#2a2a7a" />
-      <rect x={config.body % 2 ? '34' : '28'} y="66" width={config.body % 2 ? '60' : '72'} height="42" fill={body} />
-      <rect x="38" y="34" width="52" height="48" fill="#e8e8f0" />
-      {config.hair === 0 && <rect x="34" y="26" width="60" height="16" fill={hair} />}
-      {config.hair === 1 && <polygon points="34,42 48,24 62,42 76,24 94,42" fill={hair} />}
-      {config.hair === 2 && <><rect x="30" y="28" width="68" height="14" fill={hair} /><rect x="72" y="18" width="22" height="12" fill={hair} /></>}
-      {config.hair === 3 && <polygon points="34,40 44,22 58,40 70,22 84,40 94,22 98,40" fill={hair} />}
-      <rect x="48" y={faceY} width="10" height="10" fill="#1e1e5a" />
-      <rect x="72" y={faceY} width="10" height="10" fill="#1e1e5a" />
-      {config.face === 0 && <rect x="54" y="66" width="24" height="6" fill="#1e1e5a" />}
-      {config.face === 1 && <rect x="58" y="64" width="16" height="10" fill="#1e1e5a" />}
-      {config.face === 2 && <polygon points="54,68 66,76 78,68" fill="#1e1e5a" />}
-      {config.face === 3 && <><rect x="52" y="65" width="28" height="4" fill="#1e1e5a" /><rect x="52" y="72" width="28" height="4" fill="#1e1e5a" /></>}
-      {config.accessory === 1 && <><rect x="42" y="46" width="22" height="14" fill="none" stroke={accessory} strokeWidth="5" /><rect x="68" y="46" width="22" height="14" fill="none" stroke={accessory} strokeWidth="5" /><rect x="63" y="51" width="6" height="4" fill={accessory} /></>}
-      {config.accessory === 2 && <><rect x="92" y="72" width="10" height="28" fill={accessory} /><rect x="86" y="64" width="22" height="12" fill={accessory} /></>}
-      {config.accessory === 3 && <rect x="34" y="38" width="60" height="8" fill={accessory} />}
+      {renderBackground(config.background, palette.bg, palette.accent)}
+      {accessoryIdx === 5 && renderHalo(palette.pop)}
+      <rect x="54" y="78" width="20" height="14" fill={SKIN} />
+      <rect x="54" y="88" width="20" height="2" fill={INK} fillOpacity="0.18" />
+      {renderBody(config.body, palette.body)}
+      <rect x="34" y="24" width="60" height="58" rx="9" fill={SKIN} />
+      <rect x="34" y="70" width="60" height="12" rx="6" fill={SKIN_SHADOW} fillOpacity="0.35" />
+      <rect x="30" y="52" width="6" height="12" rx="2" fill={SKIN} />
+      <rect x="92" y="52" width="6" height="12" rx="2" fill={SKIN} />
+      <rect x="32" y="54" width="2" height="6" fill={SKIN_SHADOW} fillOpacity="0.5" />
+      <rect x="94" y="54" width="2" height="6" fill={SKIN_SHADOW} fillOpacity="0.5" />
+      {renderHair(config.hair, palette.hair)}
+      {renderFace(config.face)}
+      {accessoryIdx !== 5 && accessoryIdx !== 0 && renderAccessory(config.accessory, palette.pop)}
     </svg>
   )
 }
