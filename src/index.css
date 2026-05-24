@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Press+Start+2P&display=swap');
+
+:root {
+  --c64-blue: #4040b0;
+  --c64-blue-dark: #2a2a7a;
+  --c64-blue-light: #6060d0;
+  --c64-cream: #b0b0d0;
+  --c64-white: #e8e8f0;
+  --c64-border: #7070a0;
+  --stripe-1: #f03070;
+  --stripe-2: #f0a000;
+  --stripe-3: #f0f000;
+  --stripe-4: #30d060;
+  --stripe-5: #30c0f0;
+  --stripe-6: #c030f0;
+  --action-primary: #f03070;
+  --action-confirm: #30d060;
+  --action-warn: #f0a000;
+  --action-danger: #f03070;
+  --overlay-scanline: rgba(0, 0, 0, 0.04);
+  --surface-inset: #1e1e5a;
+  --display-font: 'C64 Pro Mono', 'Press Start 2P', 'Courier New', monospace;
+  --ui-font: 'Outfit', sans-serif;
+  color: var(--c64-cream);
+  background: var(--c64-blue);
+  font-family: var(--ui-font);
+  font-synthesis: none;
+  line-height: 1.45;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c64-blue);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--c64-white);
+}
