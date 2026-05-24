@@ -577,32 +577,53 @@ function GuestQueueList({ queue, singers, singerId }: { queue: Doc<'queueEntries
   )
 }
 
-function DisplayQueueRibbon({ queue, singers }: { queue: Doc<'queueEntries'>[]; singers: Doc<'singers'>[] }) {
-  const upcoming = queue.filter((entry) => entry.status !== 'singing').slice(0, 5)
+function DisplaySidePanel({
+  joinLink,
+  queue,
+  singers,
+  currentEntry,
+}: {
+  joinLink: string
+  queue: Doc<'queueEntries'>[]
+  singers: Doc<'singers'>[]
+  currentEntry: Doc<'queueEntries'> | null
+}) {
+  const upcoming = queue.filter((entry) => entry.status !== 'singing').slice(0, 4)
   return (
-    <aside className="display-queue-ribbon" aria-label="Upcoming queue">
-      <span className="display-queue-label">{upcoming.length === 0 ? 'QUEUE OPEN' : 'UP NEXT'}</span>
-      <div className="display-queue-chips">
-        {upcoming.length === 0 ? (
-          <span className="display-empty-chip">Scan to add a song</span>
+    <aside className="display-side-panel" aria-label="Display status">
+      <section className="display-side-current">
+        <span className="display-side-label">{currentEntry ? currentEntry.status : 'OPEN'}</span>
+        {currentEntry ? (
+          <>
+            <div className="avatar-pair">
+              {singerAvatars(currentEntry, singers).map((singer) => <Avatar key={singer._id} config={singer.avatar} size="small" />)}
+            </div>
+            <strong>{singerName(currentEntry, singers)}</strong>
+            <span>{currentEntry.dedication ? `${currentEntry.songTitle} - dedicated to ${currentEntry.dedication}` : currentEntry.songTitle}</span>
+          </>
         ) : (
-          upcoming.map((entry, index) => (
-            <span className={index === 0 ? 'display-queue-chip next' : 'display-queue-chip'} key={entry._id}>
-              <strong>{index + 1}</strong>
-              {singerName(entry, singers)}
-            </span>
-          ))
+          <span>No song playing</span>
         )}
-      </div>
-    </aside>
-  )
-}
-
-function DisplayJoinBug({ joinLink }: { joinLink: string }) {
-  return (
-    <aside className="display-join-bug">
-      <img alt="Join QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(joinLink)}`} />
-      <span>JOIN</span>
+      </section>
+      <section className="display-side-queue">
+        <span className="display-side-label">{upcoming.length === 0 ? 'QUEUE OPEN' : 'UP NEXT'}</span>
+        <div>
+          {upcoming.length === 0 ? (
+            <p>Scan to add a song</p>
+          ) : (
+            upcoming.map((entry, index) => (
+              <article className={index === 0 ? 'display-side-queue-row next' : 'display-side-queue-row'} key={entry._id}>
+                <strong>{index + 1}</strong>
+                <span>{singerName(entry, singers)}</span>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+      <section className="display-side-join">
+        <img alt="Join QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(joinLink)}`} />
+        <span>JOIN</span>
+      </section>
     </aside>
   )
 }
@@ -1128,6 +1149,7 @@ function DisplayView() {
 
   const { session, queue, singers, activeEntry, readyEntry, reactions } = data
   const joinLink = joinUrl(session._id)
+  const sidePanelEntry = activeEntry ?? readyEntry ?? null
 
   let content
   if (session.status === 'break') {
@@ -1150,7 +1172,6 @@ function DisplayView() {
             <p>Playing now</p>
           </div>
         )}
-        <LowerThird entry={activeEntry} singers={singers} />
         <ReactionFloat reactions={reactions} />
       </section>
     )
@@ -1171,10 +1192,7 @@ function DisplayView() {
         <p className="eyebrow">Karaoke Palace</p>
         <h1>{queue.length === 0 ? 'QUEUE OPEN' : session.name}</h1>
         <h2>{queue.length === 0 ? 'No songs waiting' : 'Ready for the next singer'}</h2>
-        <div className="qr-box tv">
-          <img alt="Join QR code" src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(joinLink)}`} />
-          <p>SCAN TO SING</p>
-        </div>
+        <p>Scan the side panel to add a song.</p>
       </section>
     )
   }
@@ -1183,8 +1201,7 @@ function DisplayView() {
     <main className="display-shell">
       <StripeBand />
       {content}
-      <DisplayJoinBug joinLink={joinLink} />
-      <DisplayQueueRibbon queue={queue} singers={singers} />
+      <DisplaySidePanel joinLink={joinLink} queue={queue} singers={singers} currentEntry={sidePanelEntry} />
       <StripeBand footer={session.stage === 'playing'} />
     </main>
   )
@@ -1215,7 +1232,11 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
         videoId,
         playerVars: {
           autoplay: 1,
-          controls: 1,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          iv_load_policy: 3,
+          modestbranding: 1,
           rel: 0,
           playsinline: 1,
           origin: window.location.origin,
@@ -1280,20 +1301,6 @@ function TypeOnText({ text }: { text: string }) {
     return () => window.clearInterval(timer)
   }, [text])
   return <h1 className="type-on">{visible}<span /></h1>
-}
-
-function LowerThird({ entry, singers }: { entry: Doc<'queueEntries'>; singers: Doc<'singers'>[] }) {
-  return (
-    <div className="lower-third">
-      <div className="avatar-pair">
-        {singerAvatars(entry, singers).map((singer) => <Avatar key={singer._id} config={singer.avatar} size="small" />)}
-      </div>
-      <div>
-        <strong>{singerName(entry, singers)}</strong>
-        <span>{entry.dedication ? `${entry.songTitle} - dedicated to ${entry.dedication}` : entry.songTitle}</span>
-      </div>
-    </div>
-  )
 }
 
 function ReactionFloat({ reactions }: { reactions: Doc<'reactions'>[] }) {
