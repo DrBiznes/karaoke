@@ -50,11 +50,12 @@ declare global {
           videoId: string
           playerVars: Record<string, number | string>
           events: {
+            onReady?: (event: { target: { getIframe: () => HTMLIFrameElement } }) => void
             onStateChange: (event: { data: number }) => void
             onError: (event: { data: number }) => void
           }
         },
-      ) => { destroy: () => void }
+      ) => { destroy: () => void; getIframe: () => HTMLIFrameElement }
       PlayerState: { ENDED: number }
     }
     onYouTubeIframeAPIReady?: () => void
@@ -96,6 +97,16 @@ function joinUrl(sessionId: Id<'sessions'>) {
 
 function youtubeWatch(videoId: string) {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+}
+
+function openAndFocusYouTube(watchUrl: string) {
+  const youtubeWindow = window.open(watchUrl, 'karaoke_youtube_player')
+  youtubeWindow?.focus()
+  return Boolean(youtubeWindow)
+}
+
+function isEmbedDisabledError(code: number) {
+  return code === 101 || code === 150
 }
 
 function singerName(
@@ -809,6 +820,7 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
   const openedFallbackRef = useRef(false)
   const [playbackError, setPlaybackError] = useState<number | null>(null)
   const watchUrl = youtubeWatch(videoId)
+  const embedDisabled = playbackError !== null && isEmbedDisabledError(playbackError)
 
   useEffect(() => {
     endedRef.current = false
@@ -816,17 +828,29 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
     let player: { destroy: () => void } | null = null
     const handlePlaybackError = (code: number) => {
       setPlaybackError(code)
-      if (!openedFallbackRef.current) {
+      if (isEmbedDisabledError(code) && !openedFallbackRef.current) {
         openedFallbackRef.current = true
-        window.open(watchUrl, '_blank', 'noopener,noreferrer')
+        openAndFocusYouTube(watchUrl)
       }
     }
     const createPlayer = () => {
       if (!elementRef.current || !window.YT) return
       player = new window.YT.Player(elementRef.current, {
         videoId,
-        playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1 },
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          rel: 0,
+          playsinline: 1,
+          origin: window.location.origin,
+          widget_referrer: window.location.href,
+        },
         events: {
+          onReady: (event) => {
+            const iframe = event.target.getIframe()
+            iframe.referrerPolicy = 'strict-origin-when-cross-origin'
+            iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture'
+          },
           onStateChange: (event) => {
             if (event.data === window.YT?.PlayerState.ENDED && !endedRef.current) {
               endedRef.current = true
@@ -851,12 +875,17 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
   return (
     <div className="youtube-frame">
       <div ref={elementRef} />
-      {playbackError !== null && (
+      {embedDisabled && (
         <div className="youtube-fallback">
           <p className="eyebrow">YOUTUBE PLAYBACK BLOCKED</p>
-          <h2>Opened in YouTube</h2>
-          <p>This karaoke track cannot play embedded here.</p>
-          <a href={watchUrl} target="_blank" rel="noreferrer">OPEN YOUTUBE TAB</a>
+          <h2>Switching to YouTube</h2>
+          <p>This karaoke track cannot play embedded here. The display tried to open and focus YouTube in a new tab.</p>
+          <button type="button" onClick={() => openAndFocusYouTube(watchUrl)}>OPEN YOUTUBE TAB</button>
+        </div>
+      )}
+      {playbackError !== null && !embedDisabled && (
+        <div className="youtube-warning">
+          YouTube player error {playbackError}. Retrying with site origin enabled.
         </div>
       )}
     </div>
