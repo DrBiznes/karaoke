@@ -1210,10 +1210,15 @@ function DisplayView() {
 function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => void }) {
   const elementRef = useRef<HTMLDivElement>(null)
   const endedRef = useRef(false)
+  const onEndedRef = useRef(onEnded)
   const openedFallbackRef = useRef(false)
   const [playbackError, setPlaybackError] = useState<number | null>(null)
   const watchUrl = youtubeWatch(videoId)
   const embedDisabled = playbackError !== null && isEmbedDisabledError(playbackError)
+
+  useEffect(() => {
+    onEndedRef.current = onEnded
+  }, [onEnded])
 
   useEffect(() => {
     endedRef.current = false
@@ -1251,7 +1256,7 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
           onStateChange: (event) => {
             if (event.data === window.YT?.PlayerState.ENDED && !endedRef.current) {
               endedRef.current = true
-              onEnded()
+              onEndedRef.current()
             }
           },
           onError: (event) => handlePlaybackError(event.data),
@@ -1267,7 +1272,7 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
       document.body.appendChild(script)
     }
     return () => player?.destroy()
-  }, [videoId, onEnded, watchUrl])
+  }, [videoId, watchUrl])
 
   return (
     <div className="youtube-frame">
